@@ -78,7 +78,8 @@ under QEMU on macOS, with SSH and a coding editor. Useful to confirm a patched `
 HMI comes up, SSH works and the coding is intact *before* you go to the car. It does **not** expose
 the HSFZ diagnostic endpoint (TCP 6801), so evocode's diagnostic-plane commands
 (`read`/`write`/`sign`/`fsc apply`/`root`) can't be driven against it, and maps/nav don't run — it
-complements on-car testing, it doesn't replace it. (License: PolyForm Noncommercial.)
+complements on-car testing, it doesn't replace it. (License: PolyForm Noncommercial.) A step-by-step
+rehearsal — what it can and can't test, the flow, pass/fail — is in [docs/testing.md](docs/testing.md).
 
 ## 3. Risk map — the places this can go wrong, and the guard for each
 
