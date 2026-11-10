@@ -29,7 +29,7 @@ of the car the operator owns, and (on `--commit`) that VIN matches the VIN read 
 connected car. Do not route around it — if it blocks you, that is the design working; explain it.
 
 ```bash
-export NBTEVO_OWN_VIN=WBA........K465354
+export NBTEVO_OWN_VIN=<your VIN>
 ```
 
 ---

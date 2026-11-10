@@ -45,7 +45,7 @@ pip install -e .          # чистый stdlib; без рантайм-зави�
 ## Быстрый старт
 
 ```bash
-export NBTEVO_OWN_VIN=WBA........K465354      # VIN машины, которой вы владеете
+export NBTEVO_OWN_VIN=<ваш VIN>      # VIN машины, которой вы владеете
 
 # 1. Идентифицировать устройство (читает SVK: BTLD + CAFD + VIN). Никогда не предполагать их.
 evocode identify --host 169.254.199.99
