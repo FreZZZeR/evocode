@@ -151,6 +151,22 @@ def test_build_skeleton():
     ], doc["parameters"]
 
 
+def test_fw_install_plan():
+    from evocode import fw
+    steps = fw.plan("/fs/sda0/opt/car/bin/NBTCarHU", "/fs/sda0",
+                    "/fs/sda0/opt/car/bin/NBTCarHU.new", 3827760,
+                    backup=True, mode="755", restart="appreset")
+    assert steps[0] == "mount -uw /fs/sda0", steps                     # remount rw first
+    bi = next(i for i, s in enumerate(steps) if s.startswith("["))     # backup
+    ui = next(i for i, s in enumerate(steps) if s.startswith("upload "))
+    mi = next(i for i, s in enumerate(steps) if s.startswith("mv "))   # rename-over
+    assert bi < mi and ui < mi, steps                                  # backup + upload precede rename-over
+    assert steps[mi].endswith("/fs/sda0/opt/car/bin/NBTCarHU"), steps  # mv targets the real path
+    assert "mount -ur /fs/sda0" in steps and steps[-1] == "restart: appreset", steps
+    # --no-backup drops the cp step
+    assert not any(s.startswith("[") for s in fw.plan("/a/b", "/a", "/a/b.new", 10, backup=False))
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

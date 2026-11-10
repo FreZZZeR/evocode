@@ -596,6 +596,51 @@ def cmd_root_revert(a) -> int:
     return _root_flash(a, stock_data, "OPT_DEBUG revert (stock starter.cfg)")
 
 
+# ---- fw (firmware-file install over SSH; filesystem plane) ----------------------
+
+def cmd_fw_pull(a) -> int:
+    from . import fw
+    data = fw.pull(a.host, a.remote, user=a.user, password=a.password, key_filename=a.key, port=a.port)
+    Path(a.out).write_bytes(data)
+    print("pulled %s (%d bytes) -> %s" % (a.remote, len(data), a.out))
+    return 0
+
+
+def cmd_fw_install(a) -> int:
+    from . import fw
+    data = Path(a.file).read_bytes()
+    steps = fw.plan(a.remote, a.mount, a.remote + ".new", len(data),
+                    backup=not a.no_backup, mode=a.mode, restart=a.restart)
+    if not a.commit:
+        print("-- DRY RUN -- install %s -> %s:%s (%d bytes)" % (a.file, a.host, a.remote, len(data)))
+        for s in steps:
+            print("  %s" % s)
+        print("\nRe-run with --commit to install. Revert later: evocode fw revert.")
+        return 0
+    consent.owned_vin()                                  # env must name the car you own
+    if a.diag_host:                                      # strong gate: confirm VIN over the diagnostic plane
+        with Hsfz(a.diag_host) as h:
+            vin = Uds(h, a.target).read_vin()
+            consent.assert_owned(vin)
+            print("diagnostic VIN %s confirmed" % vin)
+    ok = fw.install(a.host, data, a.remote, mount=a.mount, backup=not a.no_backup, mode=a.mode,
+                    restart=a.restart, user=a.user, password=a.password, key_filename=a.key,
+                    port=a.port, log=print)
+    return 0 if ok else 1
+
+
+def cmd_fw_revert(a) -> int:
+    from . import fw
+    if not a.commit:
+        print("-- DRY RUN -- would restore %s.orig -> %s on %s (+ remount, restart)" % (a.remote, a.remote, a.host))
+        print("Re-run with --commit.")
+        return 0
+    consent.owned_vin()
+    ok = fw.revert(a.host, a.remote, mount=a.mount, restart=a.restart,
+                   user=a.user, password=a.password, key_filename=a.key, port=a.port, log=print)
+    return 0 if ok else 1
+
+
 # ---- parser --------------------------------------------------------------------
 
 def _target(x: str) -> int:
@@ -730,6 +775,30 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--stock", required=True, help="the original stock starter.cfg")
     g.add_argument("--btld", default="00001FFD"); g.add_argument("--reset-timeout", type=int, default=50)
     g.add_argument("--commit", action="store_true"); g.set_defaults(fn=cmd_root_revert)
+
+    # Firmware-file install over SSH (filesystem plane): `evocode fw <cmd>`. Needs the `ssh` extra.
+    def ssh_opts(p):
+        p.add_argument("--host", required=True, help="dev SSH host (the unit's dev interface)")
+        p.add_argument("--user", default="root"); p.add_argument("--port", type=int, default=22)
+        p.add_argument("--password", help="SSH password (omit for passwordless/agent/key)")
+        p.add_argument("--key", help="SSH private key file")
+    wp = sub.add_parser("fw", help="firmware-file install over SSH (filesystem plane; needs the `ssh` extra)")
+    ws = wp.add_subparsers(dest="fw_cmd", required=True)
+    g = ws.add_parser("pull", help="download a file off the unit (e.g. live NBTCarHU to patch)")
+    ssh_opts(g); g.add_argument("--remote", required=True, help="remote path, e.g. /fs/sda0/opt/car/bin/NBTCarHU")
+    g.add_argument("-o", "--out", required=True); g.set_defaults(fn=cmd_fw_pull)
+    g = ws.add_parser("install", help="safely replace a file on the unit (backup + rename-over; dry-run unless --commit)")
+    ssh_opts(g); g.add_argument("--remote", required=True); g.add_argument("--file", required=True, help="local file to install")
+    g.add_argument("--mount", default="/fs/sda0"); g.add_argument("--mode", default="755", help="perms for the new file (default 755; use for configs)")
+    g.add_argument("--restart", help="remote command to restart the HMI after install")
+    g.add_argument("--no-backup", action="store_true", help="skip keeping remote.orig (NOT recommended)")
+    g.add_argument("--diag-host", help="HSFZ host to confirm the car's VIN over diagnostics before writing")
+    g.add_argument("--target", type=_target, default=TGT_HU, help="ECU diag address for --diag-host")
+    g.add_argument("--commit", action="store_true"); g.set_defaults(fn=cmd_fw_install)
+    g = ws.add_parser("revert", help="restore remote.orig (the backup install kept); dry-run unless --commit")
+    ssh_opts(g); g.add_argument("--remote", required=True); g.add_argument("--mount", default="/fs/sda0")
+    g.add_argument("--restart", help="remote command to restart the HMI after revert")
+    g.add_argument("--commit", action="store_true"); g.set_defaults(fn=cmd_fw_revert)
     return ap
 
 

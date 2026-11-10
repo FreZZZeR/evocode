@@ -106,7 +106,9 @@ evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; add
 
 `verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` round it out. Installing the patched `NBTCarHU` is a
 firmware-replace step (brick-risk): back up the stock anchor (`--backup`) and keep it to revert, and
-rehearse the swap first in an emulator — see [docs/testing.md](docs/testing.md).
+rehearse the swap first in an emulator — see [docs/testing.md](docs/testing.md). evocode can do the
+install itself over SSH — `evocode fw install` (optional `[ssh]` extra): backup + rename-over to a new
+inode, dry-run by default (`fw pull` fetches the live binary to patch, `fw revert` restores it).
 That step needs a root shell on the unit — see **[docs/root-access.md](docs/root-access.md)** for how
 root/SSH is enabled (OPT_DEBUG), why it's an ENET flash and not itself an SSH operation, and its risks.
 
