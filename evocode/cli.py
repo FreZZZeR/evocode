@@ -570,7 +570,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("ncd_in"); p.add_argument("ncd_out"); p.add_argument("--key", required=True)
     p.add_argument("--scheme", default=coding.DEFAULT_SCHEME, choices=sorted(coding.SCHEMES))
     p.add_argument("--set", action="append", default=[], metavar="DG,OFF,VAL[,MASK,SHIFT]",
-                   help="edit a coding byte, e.g. 0x3000,107,0x80,0x80,7")
+                   help="edit a coding byte, e.g. 0x3000,107,1,0x80,7")
     p.set_defaults(fn=cmd_sign)
 
     p = sub.add_parser("decode", help="show current values of an NCD against a catalog")

@@ -122,7 +122,7 @@ evocode read --host 169.254.199.99 -o backup.ncd       # бэкап живой �
 evocode decode --ncd backup.ncd --catalog catalogs/cafd_00001ef6.json   # что сейчас говорит?
 evocode recover-key --btld 00001FFD --psdzdata /path -o key.json        # один раз
 evocode verify --ncd backup.ncd --key key.json         # золотая проверка: подписчик совпадает с машиной
-evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,0x80,0x80,7   # правка + переподпись офлайн
+evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,1,0x80,7   # правка + переподпись офлайн
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json   # DRY RUN
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json --commit
 evocode read --host 169.254.199.99 -o after.ncd        # прочитать обратно + diff; смотреть, как поднимается HMI

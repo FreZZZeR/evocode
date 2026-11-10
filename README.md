@@ -60,7 +60,7 @@ evocode recover-key --btld 00001FFD --psdzdata /path/to/psdzdata -o key.json
 evocode verify --ncd backup.ncd --key key.json
 
 # 4. Edit a coding byte and re-sign offline (verified locally before anything goes to the car).
-evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,0x80,0x80,7
+evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,1,0x80,7
 
 # 5. Write it (DRY RUN unless --commit; --commit re-checks VIN and the signature first).
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json --commit

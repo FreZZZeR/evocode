@@ -119,7 +119,7 @@ evocode read --host 169.254.199.99 -o backup.ncd       # back up live coding (th
 evocode decode --ncd backup.ncd --catalog catalogs/cafd_00001ef6.json   # what does it say now?
 evocode recover-key --btld 00001FFD --psdzdata /path -o key.json        # one time
 evocode verify --ncd backup.ncd --key key.json         # gold check: signer matches the car
-evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,0x80,0x80,7   # edit + re-sign offline
+evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,1,0x80,7   # edit + re-sign offline
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json   # DRY RUN
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json --commit
 evocode read --host 169.254.199.99 -o after.ncd        # read back + diff; watch the HMI come up

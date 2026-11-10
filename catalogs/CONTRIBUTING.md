@@ -112,5 +112,5 @@ evocode decode --ncd backup.ncd --catalog catalogs/cafd_00001ef6.json --only A4A
 ```
 
 To flip it, the *same* coordinate drives the signer: `evocode sign backup.ncd out.ncd --key key.json
---set 0x3000,107,0x80,0x80,7`. If `decode` and `sign` agree on the coordinate, the entry is right.
+--set 0x3000,107,1,0x80,7`. If `decode` and `sign` agree on the coordinate, the entry is right.
 See [../examples/a4a.md](../examples/a4a.md) for the full worked flow.
