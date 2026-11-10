@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+
+# Key material & owner car data — NEVER commit (see AGENTS.md "Key hygiene").
+# These are the operator's own recovered car keys / backups, not repo content.
+*_key.json
+ncd_key.json
+l3_key.json
+owner*.json
+*.pem
+*.p12
+*.pfx
+*.lic
+*.der
+pulled/
+psdz/
+*.ncd
+*.fsc
+*.blobb
+*blobB*

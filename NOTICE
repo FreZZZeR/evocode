@@ -1,0 +1,13 @@
+nbt-evo-coding
+Copyright 2026 Igor Titov
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product is an independent, clean-room implementation of BMW NBT EVO (QNX)
+diagnostic and coding protocols. It vendors no third-party source code; its core
+depends only on the Python standard library. See CREDITS.md for provenance and
+acknowledgements.
+
+"BMW", "NBT", "iDrive" and related marks are trademarks of their respective
+owners and are used here only to describe compatibility. This project is not
+affiliated with or endorsed by BMW.
