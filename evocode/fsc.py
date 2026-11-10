@@ -272,3 +272,32 @@ def patch_blobb(nbtcarhu: bytes, offset: int, modulus: int) -> bytes:
     d = bytearray(nbtcarhu)
     d[offset:offset + SIG_LEN] = blobB_le(modulus)
     return bytes(d)
+
+
+# ---- SWT routine payloads (on-car FSC store / read / disable; RID 0x0F1F) ----
+# Wire format from BMW's F020 SWT ODX (RC_SFSC / RC_GFSC), cross-checked against a live
+# RC_GFSC capture on an NBT EVO unit. RoutineControl startRoutine (31 01) to RID 0x0F1F:
+# first data byte is the RCO (operation), then a SWID_STRUCT (appno + upgrade-index), and
+# — for store only — the FSC itself (raw per the ODX). Not yet exercised on a live unit.
+
+SWT_RID = 0x0F1F
+RCO_STORE = 0x07     # FREISCHALTCODE_SCHREIBEN (store)
+RCO_CHECK = 0x09     # FREISCHALTCODE_PRUEFEN (check)
+RCO_CANCEL = 0x0A    # FREISCHALTCODE_STORNIEREN (disable / cancel)
+RCO_READ = 0x0B      # FREISCHALTCODE_LESEN (read)
+
+
+def swid(appno: int, upgrade_index: int = 1) -> bytes:
+    """SWID_STRUCT: appno (2 BE) + upgrade-index (2 BE) — what read/disable address, and the store prefix."""
+    return appno.to_bytes(2, "big") + upgrade_index.to_bytes(2, "big")
+
+
+def swid_of(fsc: bytes) -> bytes:
+    """The SWID taken straight from an FSC body (appno @2, upgrade-index @4)."""
+    return bytes(fsc[2:6])
+
+
+def store_payload(fsc: bytes, base32: bool = False) -> bytes:
+    """RC_SFSC store data: SWID + FSC (FSC raw per the ODX; base32 only as an escape hatch)."""
+    import base64
+    return swid_of(fsc) + (base64.b32encode(fsc) if base32 else bytes(fsc))

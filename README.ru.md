@@ -103,9 +103,11 @@ evocode fsc whosigned --fsc a.fsc --fsc b.fsc --recover           # чей як�
 evocode fsc patch-blobb NBTCarHU --key owner.json --backup stock_blobB.bin -o NBTCarHU.patched
 evocode fsc mint --key owner.json --appno 0x0143 -o carplay.fsc   # CarPlay (VIN-generic)
 evocode fsc apply --fsc-dir ./fscs                                # dry-run; добавьте --host/--l3-key/--commit для записи
+evocode fsc read  --host 169.254.199.99 --appno 0x0143            # прочитать текущий статус FSC (безопасно, без SecurityAccess)
+evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; добавьте --l3-key/--commit чтобы отключить
 ```
 
-`verify` / `parse` / `fingerprint` / `from-log` дополняют картину. Установка пропатченного `NBTCarHU` —
+`verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` дополняют картину. Установка пропатченного `NBTCarHU` —
 шаг замены прошивки (риск «кирпича»): сохраните сток-якорь (`--backup`) и держите его для отката.
 Этот шаг требует root-шелла на устройстве — см. **[docs/root-access.md](docs/root-access.ru.md)**: как
 включается root/SSH (OPT_DEBUG), почему это ENET-флеш, а не SSH-операция сама по себе, и его риски.

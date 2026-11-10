@@ -128,6 +128,17 @@ def test_fsc_sign_recover():
     assert not F.verify(bytes(tampered), n)[0], "tampered body must fail verify"
 
 
+def test_fsc_swt_framing():
+    from evocode import fsc as F
+    import base64
+    assert F.swid(0x0143, 1) == bytes.fromhex("01430001")
+    k = F.keygen(1024); n, d = int(k["n_hex"], 16), int(k["d_hex"], 16)
+    tok = F.mint(n, d, 0x0143, upgrade_idx=1)
+    assert F.swid_of(tok) == F.swid(0x0143, 1), "SWID must come straight from the FSC body"
+    assert F.store_payload(tok) == F.swid_of(tok) + tok, "store = SWID + raw FSC (ODX)"
+    assert F.store_payload(tok, base32=True) == F.swid_of(tok) + base64.b32encode(tok)
+
+
 def test_build_skeleton():
     from evocode import catalog
     xml = (b'<caf><data><datagroup address="3000">'

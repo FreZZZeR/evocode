@@ -100,9 +100,11 @@ evocode fsc whosigned --fsc a.fsc --fsc b.fsc --recover           # whose anchor
 evocode fsc patch-blobb NBTCarHU --key owner.json --backup stock_blobB.bin -o NBTCarHU.patched
 evocode fsc mint --key owner.json --appno 0x0143 -o carplay.fsc   # CarPlay (VIN-generic)
 evocode fsc apply --fsc-dir ./fscs                                # dry-run; add --host/--l3-key/--commit to write
+evocode fsc read  --host 169.254.199.99 --appno 0x0143            # read current FSC status (safe, no SecurityAccess)
+evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; add --l3-key/--commit to disable one
 ```
 
-`verify` / `parse` / `fingerprint` / `from-log` round it out. Installing the patched `NBTCarHU` is a
+`verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` round it out. Installing the patched `NBTCarHU` is a
 firmware-replace step (brick-risk): back up the stock anchor (`--backup`) and keep it to revert.
 That step needs a root shell on the unit — see **[docs/root-access.md](docs/root-access.md)** for how
 root/SSH is enabled (OPT_DEBUG), why it's an ENET flash and not itself an SSH operation, and its risks.
