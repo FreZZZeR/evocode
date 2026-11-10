@@ -109,7 +109,9 @@ evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; д�
 
 `verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` дополняют картину. Установка пропатченного `NBTCarHU` —
 шаг замены прошивки (риск «кирпича»): сохраните сток-якорь (`--backup`), держите его для отката и
-сначала отрепетируйте своп в эмуляторе — см. [docs/testing.md](docs/testing.ru.md).
+сначала отрепетируйте своп в эмуляторе — см. [docs/testing.md](docs/testing.ru.md). evocode умеет и сам
+установить файл по SSH — `evocode fw install` (опциональный extra `[ssh]`): бэкап + rename-over новым
+inode, dry-run по умолчанию (`fw pull` снимет живой бинарь для патча, `fw revert` вернёт стоковый).
 Этот шаг требует root-шелла на устройстве — см. **[docs/root-access.md](docs/root-access.ru.md)**: как
 включается root/SSH (OPT_DEBUG), почему это ENET-флеш, а не SSH-операция сама по себе, и его риски.
 

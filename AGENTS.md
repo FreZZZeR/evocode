@@ -45,7 +45,7 @@ different risk.
 | Auth | UDS **SecurityAccess L3** (seed/key, `l3.py`) | root shell on the dev interface |
 | What it does | reads, coding, FSC, flash | replaces files on the unit's partitions |
 | Needs SSH? | **No** | — |
-| evocode commands | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | installing `NBTCarHU.patched`, installing a plugin |
+| evocode commands | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | `fw pull`/`install`/`revert` — installing `NBTCarHU.patched`, a plugin |
 
 **So: coding and FSC never touch SSH.** They ride the same diagnostic channel E-Sys uses. SSH is
 only for pushing firmware *files* onto the unit (the blobB swap's `NBTCarHU`, or an aftermarket
@@ -88,7 +88,7 @@ rehearsal — what it can and can't test, the flow, pass/fail — is in [docs/te
 | `write` (coding) | A valid-in-the-map bit can still freeze/blank the HMI on *this* unit | dry-run, VIN gate, `verify` offline first, change one thing at a time and log it | write back `backup.ncd` |
 | `sign` with wrong key | Unsigned/mis-signed NCD reverts on next boot (silent no-op) | `recover-key` from the operator's own PSdZData, then `verify` reproduces the car's own signature byte-exact before trusting it | — (nothing written) |
 | `fsc apply` | Store-RCO selector (`0x07`) is read from one unit's ODX; another build may differ → `requestOutOfRange` | dry-run read-back, `--store-rco`/`--base32` escape hatches, L3 gate | `DisableFSC` per appno, or restore stock anchor |
-| `patch-blobb` + install `NBTCarHU` | Firmware-file replace over SSH — brick-risk | `--backup` the stock anchor/binary and keep it; rename-over a new inode, never edit in place; dev/SSH lives independently of the HMI so a dead HMI is still recoverable | `mv NBTCarHU.orig NBTCarHU` + HMI restart |
+| `patch-blobb` + install `NBTCarHU` | Firmware-file replace over SSH — brick-risk | `evocode fw install` encodes the safe sequence (keeps `NBTCarHU.orig`, uploads to a temp, rename-over a new inode — never edits in place), dry-run by default; dev/SSH lives independently of the HMI so a dead HMI is still recoverable | `evocode fw revert` (restores `.orig`) + HMI restart |
 | OPT_DEBUG enable (root) | SWDL flash of `starter.cfg` — wrong-version cfg fails the **next boot** | version-match the cfg to the unit's own flash; dry-run; run detached so an SSH drop can't tear the write | re-flash stock `starter.cfg` (`--revert`); serial/eMMC is the backstop. See [docs/root-access.md](docs/root-access.md) |
 
 **Version-variance gotchas** — the numbers are per-build; the methods transfer, the constants you

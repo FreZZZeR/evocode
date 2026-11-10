@@ -47,7 +47,7 @@ export NBTEVO_OWN_VIN=<ваш VIN>
 | Аутентификация | UDS **SecurityAccess L3** (seed/key, `l3.py`) | root-шелл на dev-интерфейсе |
 | Что делает | чтение, кодировка, FSC, флеш | заменяет файлы на разделах устройства |
 | Нужен SSH? | **Нет** | — |
-| команды evocode | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | установка `NBTCarHU.patched`, установка плагина |
+| команды evocode | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | `fw pull`/`install`/`revert` — установка `NBTCarHU.patched`, плагина |
 
 **Итог: кодировка и FSC никогда не касаются SSH.** Они идут по тому же диагностическому каналу, что и
 E-Sys. SSH нужен только для заливки *файлов* прошивки на устройство (`NBTCarHU` при свопе blobB или
@@ -91,7 +91,7 @@ macOS, с SSH и редактором кодировок. Полезно убе�
 | `write` (кодировка) | Валидный по карте бит всё равно может заморозить/погасить HMI на *этом* устройстве | dry-run, ворота VIN, сначала `verify` офлайн, менять по одному и логировать | записать обратно `backup.ncd` |
 | `sign` не тем ключом | Неподписанный/неверно подписанный NCD откатится на следующей загрузке (тихий no-op) | `recover-key` из PSdZData оператора, затем `verify` воспроизводит собственную подпись машины байт-в-байт до доверия | — (ничего не записано) |
 | `fsc apply` | Селектор store-RCO (`0x07`) взят из ODX одного устройства; другая сборка может отличаться → `requestOutOfRange` | dry-run чтение-обратно, запасные `--store-rco`/`--base32`, ворота L3 | `DisableFSC` по appno или вернуть сток-якорь |
-| `patch-blobb` + установка `NBTCarHU` | Замена файла прошивки по SSH — риск «кирпича» | `--backup` сток-якоря/бинаря и сохранить его; rename-over новым inode, не править на месте; dev/SSH живёт независимо от HMI, так что мёртвый HMI всё равно восстановим | `mv NBTCarHU.orig NBTCarHU` + рестарт HMI |
+| `patch-blobb` + установка `NBTCarHU` | Замена файла прошивки по SSH — риск «кирпича» | `evocode fw install` кодирует безопасную последовательность (хранит `NBTCarHU.orig`, upload во временный, rename-over новым inode — не правит на месте), dry-run по умолчанию; dev/SSH живёт независимо от HMI, так что мёртвый HMI всё равно восстановим | `evocode fw revert` (вернёт `.orig`) + рестарт HMI |
 | Включение OPT_DEBUG (root) | SWDL-флеш `starter.cfg` — конфиг не той версии валит **следующую загрузку** | версия cfg под флеш самого устройства; dry-run; запускать отсоединённо, чтобы обрыв SSH не порвал запись | перефлешить сток `starter.cfg` (`--revert`); serial/eMMC — последний рубеж. См. [docs/root-access.md](docs/root-access.ru.md) |
 
 **Подводные камни по версиям** — числа зависят от сборки; методы переносятся, константы
