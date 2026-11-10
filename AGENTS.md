@@ -72,6 +72,14 @@ container fits: all key off those two ids *and their versions*. Read the SVK fir
 
 ---
 
+**Rehearsing without a car.** Part of the firmware-file (filesystem-plane) work can be tried in an
+emulator first: [IDEmu](https://github.com/herrbimmer/IDEmu) boots an NBT EVO head unit's own software
+under QEMU on macOS, with SSH and a coding editor. Useful to confirm a patched `NBTCarHU` boots, the
+HMI comes up, SSH works and the coding is intact *before* you go to the car. It does **not** expose
+the HSFZ diagnostic endpoint (TCP 6801), so evocode's diagnostic-plane commands
+(`read`/`write`/`sign`/`fsc apply`/`root`) can't be driven against it, and maps/nav don't run — it
+complements on-car testing, it doesn't replace it. (License: PolyForm Noncommercial.)
+
 ## 3. Risk map — the places this can go wrong, and the guard for each
 
 | Action | What can go wrong | Guard | Revert |
