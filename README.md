@@ -43,7 +43,7 @@ pip install -e .          # pure stdlib; no runtime dependencies
 ## Quickstart
 
 ```bash
-export NBTEVO_OWN_VIN=WBA........K465354      # the VIN of the car you own
+export NBTEVO_OWN_VIN=<your VIN>      # the VIN of the car you own
 
 # 1. Identify the unit (reads the SVK: BTLD + CAFD + VIN). Never assume these.
 evocode identify --host 169.254.199.99

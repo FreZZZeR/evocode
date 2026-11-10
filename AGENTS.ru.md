@@ -31,7 +31,7 @@
 объясните это.
 
 ```bash
-export NBTEVO_OWN_VIN=WBA........K465354
+export NBTEVO_OWN_VIN=<ваш VIN>
 ```
 
 ---
