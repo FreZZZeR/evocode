@@ -1,0 +1,27 @@
+{
+  "cafd": "00001EF6",
+  "version": "006.031.014",
+  "note": "Starter catalog: a few coordinates established by firmware/coding analysis and verified byte-exact against real NCDs. Grow it from your own PSdZData with `evocode build-catalog`; names are reconstructed descriptions, not shipped BMW data.",
+  "parameters": [
+    {
+      "name": "A4A (Android Auto / Apps)",
+      "token": "A4A",
+      "datagroup": "0x3000",
+      "byte": 107,
+      "mask": "0x80",
+      "shift": 7,
+      "default": 0,
+      "values": { "0": "disabled", "1": "enabled" }
+    },
+    {
+      "name": "CarPlay full-screen",
+      "token": "CARPLAY_FULLSCREEN",
+      "datagroup": "0x3000",
+      "byte": 39,
+      "mask": "0x80",
+      "shift": 7,
+      "default": 0,
+      "values": { "0": "split/widescreen off", "1": "full-screen" }
+    }
+  ]
+}
