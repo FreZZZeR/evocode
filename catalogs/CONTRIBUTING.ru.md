@@ -112,5 +112,5 @@ evocode decode --ncd backup.ncd --catalog catalogs/cafd_00001ef6.json --only A4A
 ```
 
 Чтобы переброс, та *же* координата ведёт подписчик: `evocode sign backup.ncd out.ncd --key key.json
---set 0x3000,107,0x80,0x80,7`. Если `decode` и `sign` согласны о координате — запись верна. Полный
+--set 0x3000,107,1,0x80,7`. Если `decode` и `sign` согласны о координате — запись верна. Полный
 рабочий поток см. в [../examples/a4a.md](../examples/a4a.ru.md).

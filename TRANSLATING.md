@@ -47,7 +47,7 @@ line of each file you translate.
 - **Translate** prose, headings, table text, and explanations.
 - **Keep verbatim** (do not translate): code blocks, commands, flags, file paths, identifiers,
   datagroup/byte/mask values, hex, UDS service ids, key names, `evocode` subcommand names. A reader
-  of any language runs the same `evocode sign --set 0x3000,107,0x80,0x80,7`.
+  of any language runs the same `evocode sign --set 0x3000,107,1,0x80,7`.
 - Keep relative links pointing at the **same language** where a translation exists (a Russian doc
   links to `scope.ru.md`), and fall back to the English target where it doesn't.
 

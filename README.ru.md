@@ -62,7 +62,7 @@ evocode recover-key --btld 00001FFD --psdzdata /path/to/psdzdata -o key.json
 evocode verify --ncd backup.ncd --key key.json
 
 # 4. Поменять байт кодировки и переподписать офлайн (локальная проверка до отправки на машину).
-evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,0x80,0x80,7
+evocode sign backup.ncd modified.ncd --key key.json --set 0x3000,107,1,0x80,7
 
 # 5. Записать (DRY RUN, пока нет --commit; --commit заново сверяет VIN и подпись).
 evocode write --host 169.254.199.99 --ncd modified.ncd --key key.json --l3-key l3.json --commit
