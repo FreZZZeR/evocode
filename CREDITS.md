@@ -8,8 +8,8 @@ shaped by an existing implementation's *observed behaviour* (not its code), that
 (`swdl.py`).
 
 What it implements is **BMW's own on-the-wire protocol** for the NBT EVO head unit — HSFZ framing,
-UDS (ISO 14229) services, the coding datagroup layout, and the `BMWSigVerify` coding-signature
-construction. That protocol is a matter of fact about the hardware, established over years of
+UDS (ISO 14229) services, the coding datagroup layout, the `BMWSigVerify` coding-signature
+construction, and the SWT FSC routine framing (RID 0x0F1F, from BMW's F020 ODX). That protocol is a matter of fact about the hardware, established over years of
 community reverse-engineering of iDrive systems; this project re-derives and re-expresses it in its
 own code and words. The key-recovery path (`recover-key`) likewise reproduces BMW's own PSdZ
 key-derivation — the resource-image passphrase and the E-SYS keystore chain — in original code, and

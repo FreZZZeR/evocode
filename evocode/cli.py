@@ -375,10 +375,9 @@ def cmd_fsc_patch_blobb(a) -> int:
 
 
 def cmd_fsc_apply(a) -> int:
-    import base64
     import glob
     from . import fsc as F
-    SWT_RID, RCO_STORE, RCO_READ = 0x0F1F, 0x07, 0x0B   # 0x07 = FREISCHALTCODE_SCHREIBEN (from F020 ODX)
+    store_rco = int(a.store_rco, 0) if a.store_rco else F.RCO_STORE
     files = sorted(glob.glob(str(Path(a.fsc_dir) / "*.fsc")))
     toks = {F.parse(Path(f).read_bytes())["appno"]: Path(f).read_bytes() for f in files}
     if not toks:
@@ -388,18 +387,15 @@ def cmd_fsc_apply(a) -> int:
         print("-- DRY RUN -- would send (no bytes written); needs the installed anchor to be YOUR key:")
         print("  10 03 ; 27 01 -> seed ; 27 02 <L3 key>")
         for app, t in toks.items():
-            print("  31 01 %04X %02X <base32 of %d-byte FSC>   store %s" % (SWT_RID, RCO_STORE, len(t), app))
-        print("  then read-back (RCO 0x%02X) + 11 01 reset. Re-run with --host, --l3-key and --commit." % RCO_READ)
-        print("  NOTE: store RCO 0x07 is from the F020 SWT ODX; confirm it on a first careful apply.")
+            print("  31 01 %04X %02X <SWID %s + %s FSC %dB>   store %s"
+                  % (F.SWT_RID, store_rco, F.swid_of(t).hex(), "base32" if a.base32 else "raw", len(t), app))
+        print("  then read-back (RCO 0x%02X) + 11 01 reset. Re-run with --host, --l3-key and --commit." % F.RCO_READ)
         return 0
     if not (a.host and a.l3_key):
         print("ERROR: --commit needs --host and --l3-key", file=sys.stderr)
         return 2
     consent.owned_vin()
     l3_key = json.loads(Path(a.l3_key).read_text())
-    from . import l3
-    from .hsfz import Hsfz
-    from .uds import Uds
     with Hsfz(a.host) as h:
         u = Uds(h, a.target)
         consent.assert_owned(u.read_vin())
@@ -409,12 +405,19 @@ def cmd_fsc_apply(a) -> int:
         print("SecurityAccess unlocked")
         for app, t in toks.items():
             try:
-                u.routine(0x01, SWT_RID, bytes([RCO_STORE]) + base64.b32encode(t))
+                u.routine(0x01, F.SWT_RID, bytes([store_rco]) + F.store_payload(t, a.base32))
                 print("  stored %s OK" % app)
             except UdsError as e:
                 print("  stored %s FAILED: %s" % (app, e))
+        print("read-back:")
+        for app, t in toks.items():
+            try:
+                r = u.routine(0x01, F.SWT_RID, bytes([F.RCO_READ]) + F.swid_of(t))
+                print("  %s  %s" % (app, r[4:].hex() or "(ok)"))
+            except UdsError as e:
+                print("  %s  %s" % (app, e))
         u.reset(0x01)
-    print("done; reboot + verify features. Revert = restore the stock blobB (your --backup).")
+    print("done; reboot + verify features. Revert = restore stock blobB (your --backup), or `fsc disable`.")
     return 0
 
 
@@ -435,6 +438,58 @@ def cmd_fsc_from_log(a) -> int:
     for app, t in toks.items():
         (out / ("fsc_%s.fsc" % app)).write_bytes(t)
     print("extracted %d FSC(s) -> %s/" % (len(toks), out))
+    return 0
+
+
+def cmd_fsc_read(a) -> int:
+    from . import fsc as F
+    appnos = [int(x, 0) for x in a.appno]
+    with Hsfz(a.host) as h:
+        u = Uds(h, a.target)
+        try:
+            u.session(0x03)
+        except (UdsError, RuntimeError):
+            pass                                             # read works in the default session too
+        for app in appnos:
+            try:
+                r = u.routine(0x01, F.SWT_RID, bytes([F.RCO_READ]) + F.swid(app, a.upgrade_index))
+                print("  0x%04X  present      %s" % (app, r[4:].hex() or "(ok)"))
+            except UdsError as e:
+                print("  0x%04X  not present / %s" % (app, e))
+    return 0
+
+
+def cmd_fsc_disable(a) -> int:
+    from . import fsc as F
+    appnos = [int(x, 0) for x in a.appno]
+    if not a.commit:
+        print("-- DRY RUN -- would send (no bytes written):")
+        print("  10 03 ; 27 01 -> seed ; 27 02 <L3 key>")
+        for app in appnos:
+            print("  31 01 %04X %02X %s   disable 0x%04X"
+                  % (F.SWT_RID, F.RCO_CANCEL, F.swid(app, a.upgrade_index).hex(), app))
+        print("  then 11 01 reset. Re-run with --host, --l3-key and --commit.")
+        return 0
+    if not (a.host and a.l3_key):
+        print("ERROR: --commit needs --host and --l3-key", file=sys.stderr)
+        return 2
+    consent.owned_vin()
+    l3_key = json.loads(Path(a.l3_key).read_text())
+    with Hsfz(a.host) as h:
+        u = Uds(h, a.target)
+        consent.assert_owned(u.read_vin())
+        u.session(0x03)
+        seed = u.request_seed(0x01, 0x00000000)
+        u.send_key(0x02, l3.sign_seed(seed, l3_key, user_id=0x00000000))
+        print("SecurityAccess unlocked")
+        for app in appnos:
+            try:
+                u.routine(0x01, F.SWT_RID, bytes([F.RCO_CANCEL]) + F.swid(app, a.upgrade_index))
+                print("  disabled 0x%04X OK" % app)
+            except UdsError as e:
+                print("  disable 0x%04X FAILED: %s" % (app, e))
+        u.reset(0x01)
+    print("done; reboot + verify. Re-enable = `fsc apply` the minted FSC again.")
     return 0
 
 
@@ -643,7 +698,18 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--fsc-dir", required=True, help="directory of .fsc files (from `fsc mint`)")
     g.add_argument("--host"); g.add_argument("--target", type=_target, default=TGT_HU)
     g.add_argument("--l3-key"); g.add_argument("--commit", action="store_true")
+    g.add_argument("--base32", action="store_true", help="base32-encode the FSC (escape hatch; ODX says raw)")
+    g.add_argument("--store-rco", help="store op RCO byte (default 0x07)")
     g.set_defaults(fn=cmd_fsc_apply)
+    g = fs.add_parser("read", help="read current FSC status from the car (RCO 0x0B; safe, no SecurityAccess)")
+    g.add_argument("--host", required=True); g.add_argument("--target", type=_target, default=TGT_HU)
+    g.add_argument("--appno", action="append", required=True, help="application number, e.g. 0x0143 (repeatable)")
+    g.add_argument("--upgrade-index", type=int, default=1); g.set_defaults(fn=cmd_fsc_read)
+    g = fs.add_parser("disable", help="disable an FSC by appno (RCO 0x0A + L3; dry-run unless --commit)")
+    g.add_argument("--host"); g.add_argument("--target", type=_target, default=TGT_HU)
+    g.add_argument("--appno", action="append", required=True, help="application number, e.g. 0x0143 (repeatable)")
+    g.add_argument("--upgrade-index", type=int, default=1)
+    g.add_argument("--l3-key"); g.add_argument("--commit", action="store_true"); g.set_defaults(fn=cmd_fsc_disable)
 
     # Root access (OPT_DEBUG): `evocode root <cmd>` group.
     rp = sub.add_parser("root", help="OPT_DEBUG root-access: status/prepare/enable/revert (see docs/root-access.md)")
