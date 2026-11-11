@@ -78,3 +78,8 @@ for the two-plane model.
 - Single-core TCG emulation is slow; let boot run in the background, do not poll.
 - Setup (the QEMU `omap5-uevm` target + renderer, `python3 -m idemu gui|build|run|ssh`) is IDEmu's own —
   see its repository.
+- An IDEmu console **bridge** forwards a shell but does **not** pipe exec stdin (confirmed: `cat`-over-exec
+  writes 0 bytes), so it can't exercise `evocode fw`'s file transfer — only its choreography
+  (remount / backup / rename-over / chmod on real QNX, via `fw --modern`). `fw install` verifies the
+  on-unit byte-count and aborts on mismatch, so that limitation — or a dropped transfer — can't install an
+  empty file.
