@@ -20,19 +20,26 @@ a small, dependency-free Python library and CLI.
 
 ## Status
 
-Early (0.1), but validated against real BMW data — not just internally:
+Version 0.2.x, pure-stdlib core, on PyPI (`pip install evocode`). What is proven vs. not:
 
-- **Transport, `BMWSigVerify` signature, read, verify, sign** — the signer reproduces a real car's
-  own NCD signature byte-for-byte ([examples/a4a.md](examples/a4a.md)).
-- **Write** — full choreography, **dry-run by default**, gated on your VIN.
-- **`recover-key`** — recovers your own NCD/L3 signing key from your own PSdZData; reproduces the
-  reference key exactly (needs the `crypto` extra).
-- **`decode`** — reads a backup against a per-CAFD catalog.
-- **`build-catalog`** — decrypts your own `.caf` (CMS + gzip) and writes a full coordinate skeleton
-  (1469 coordinates for CAFD `00001EF6`; A4A/CarPlay verified). Parameter **names** are a community
-  overlay (BMW strips them); no pre-derived BMW data is shipped — the catalog in `catalogs/` is the
-  named starter (A4A, CarPlay today), while the full 1469-coordinate skeleton is what `build-catalog`
-  emits from your own data. Needs the `crypto` extra + an `openssl` binary.
+- **Coding (diagnostic plane) — proven on real data.** HSFZ transport, the `BMWSigVerify` signature, and
+  `read`/`decode`/`verify`/`sign`/`write`. The signer reproduces a real car's own NCD signature
+  **byte-for-byte** ([examples/a4a.md](examples/a4a.md)); `write` is **dry-run by default** and VIN-gated.
+  `recover-key` rebuilds your own NCD/L3 key from your own PSdZData (reproduces the reference key exactly);
+  `build-catalog` decrypts your own `.caf` → a full coordinate skeleton (1469 for CAFD `00001EF6`;
+  A4A/CarPlay verified), names being a community overlay. (`recover-key`/`build-catalog` need the `crypto`
+  extra + `openssl`.)
+- **FSC activations, owner-CA (`fsc …`) — crypto proven offline; on-car path not yet on a live unit.**
+  `keygen`/`mint`/`verify`/`whosigned`/`fingerprint`/`from-log`/`find-blobb`/`patch-blobb` are proven
+  against real anchors and FSCs offline. The on-car `apply`/`read`/`disable` (SwtRoutine `0x0F1F`; store
+  `0x07` = SWID + raw FSC, read `0x0B`, disable `0x0A`) is derived from BMW's F020 ODX — **not yet
+  validated on a live unit**; dry-run by default, VIN-gated.
+- **Root / OPT_DEBUG (`root …`) — implemented, not yet on a live unit.** Enables the dev SSH interface by
+  a diagnostic SWDL flash (`swdl.py`): version-matched `starter.cfg`, dry-run, revertible.
+- **Firmware install (`fw …`, optional `[ssh]` extra) — choreography validated on a live QNX 6.5
+  emulator.** A safe file swap over the dev SSH shell (backup → upload → **size-verify** → rename-over →
+  restart). The command sequence runs on real QNX; the SSH file transport itself is **not yet validated on
+  a real unit**. See [docs/testing.md](docs/testing.md).
 
 ## Install
 
