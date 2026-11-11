@@ -76,8 +76,9 @@ for the two-plane model.
 
 - Find the blobB offset with `evocode fsc find-blobb` — never hardcode it; it differs per build.
 - Single-core TCG emulation is slow; let boot run in the background, do not poll.
-- Setup (the QEMU `omap5-uevm` target + renderer, `python3 -m idemu gui|build|run|ssh`) is IDEmu's own —
-  see its repository.
+- Standing up a stand (build IDEmu, your own version-matched SWFL + the version-pin gotcha,
+  create/build/run, the console bridge's quirks, and what each kind of stand can develop) is in
+  [dev-stand.md](dev-stand.md).
 - An IDEmu console **bridge** forwards a shell but does **not** pipe exec stdin (confirmed: `cat`-over-exec
   writes 0 bytes), so it can't exercise `evocode fw`'s file transfer — only its choreography
   (remount / backup / rename-over / chmod on real QNX, via `fw --modern`). `fw install` verifies the
