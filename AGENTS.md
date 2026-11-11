@@ -45,7 +45,7 @@ different risk.
 | Auth | UDS **SecurityAccess L3** (seed/key, `l3.py`) | root shell on the dev interface |
 | What it does | reads, coding, FSC, flash | replaces files on the unit's partitions |
 | Needs SSH? | **No** | — |
-| evocode commands | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | `fw pull`/`install`/`revert` — installing `NBTCarHU.patched`, a plugin |
+| evocode commands | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply`/`read`/`disable` `root` | `fw pull`/`install`/`revert` — installing `NBTCarHU.patched`, a plugin |
 
 **So: coding and FSC never touch SSH.** They ride the same diagnostic channel E-Sys uses. SSH is
 only for pushing firmware *files* onto the unit (the blobB swap's `NBTCarHU`, or an aftermarket
@@ -62,7 +62,7 @@ container fits: all key off those two ids *and their versions*. Read the SVK fir
 
 ## 2. Reads are free; writes are not
 
-- **Reading** — `identify`, `read`, `decode`, `fsc parse`/`whosigned`/`find-blobb` — is safe and
+- **Reading** — `identify`, `read`, `decode`, `fsc read`/`parse`/`whosigned`/`find-blobb` — is safe and
   reversible. Do it liberally to orient yourself.
 - **Writing** — `write`, `fsc apply`, `patch-blobb` + install — can brick or degrade the unit.
   Always: read + back up first, verify the artifact offline, confirm the operator is ready (parked,
