@@ -600,7 +600,7 @@ def cmd_root_revert(a) -> int:
 
 def cmd_fw_pull(a) -> int:
     from . import fw
-    data = fw.pull(a.host, a.remote, user=a.user, password=a.password, key_filename=a.key, port=a.port)
+    data = fw.pull(a.host, a.remote, user=a.user, password=a.password, key_filename=a.key, port=a.port, modern=a.modern)
     Path(a.out).write_bytes(data)
     print("pulled %s (%d bytes) -> %s" % (a.remote, len(data), a.out))
     return 0
@@ -625,7 +625,7 @@ def cmd_fw_install(a) -> int:
             print("diagnostic VIN %s confirmed" % vin)
     ok = fw.install(a.host, data, a.remote, mount=a.mount, backup=not a.no_backup, mode=a.mode,
                     restart=a.restart, user=a.user, password=a.password, key_filename=a.key,
-                    port=a.port, log=print)
+                    port=a.port, modern=a.modern, log=print)
     return 0 if ok else 1
 
 
@@ -637,7 +637,7 @@ def cmd_fw_revert(a) -> int:
         return 0
     consent.owned_vin()
     ok = fw.revert(a.host, a.remote, mount=a.mount, restart=a.restart,
-                   user=a.user, password=a.password, key_filename=a.key, port=a.port, log=print)
+                   user=a.user, password=a.password, key_filename=a.key, port=a.port, modern=a.modern, log=print)
     return 0 if ok else 1
 
 
@@ -782,6 +782,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--user", default="root"); p.add_argument("--port", type=int, default=22)
         p.add_argument("--password", help="SSH password (omit for passwordless/agent/key)")
         p.add_argument("--key", help="SSH private key file")
+        p.add_argument("--modern", action="store_true", help="talk to a modern sshd (skip legacy ssh-rsa coercion; e.g. an emulator bridge)")
     wp = sub.add_parser("fw", help="firmware-file install over SSH (filesystem plane; needs the `ssh` extra)")
     ws = wp.add_subparsers(dest="fw_cmd", required=True)
     g = ws.add_parser("pull", help="download a file off the unit (e.g. live NBTCarHU to patch)")

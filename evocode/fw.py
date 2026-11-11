@@ -16,7 +16,10 @@ Needs the ``ssh`` extra (``pip install 'evocode[ssh]'`` → paramiko **3.x/4.x**
 SHA-1 key exchange the old QNX sshd needs, hence the ``<5`` pin). It forces the legacy ``ssh-rsa``
 signature for that sshd. If paramiko still can't negotiate, fall back to the system client:
 ``ssh``/``scp -O`` with ``-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa``.
-**Not yet validated on a live unit.**
+``install()`` verifies the on-unit byte-count before the rename-over and aborts on mismatch, so a dropped
+or truncated transfer can't leave a broken/empty file. The choreography (connect, remount, backup,
+rename-over, chmod) is validated against real QNX 6.5 in an emulator; the file transport itself is **not
+yet validated on a live unit** (an emulator console bridge can't exercise it).
 """
 from __future__ import annotations
 
@@ -35,8 +38,9 @@ def plan(remote: str, mount: str, tmp: str, nbytes: int, *, backup: bool = True,
     r, t, m = shlex.quote(remote), shlex.quote(tmp), shlex.quote(mount)
     steps = ["mount -uw %s" % m]
     if backup:
-        steps.append("[ -f %s.orig ] || cp %s %s.orig" % (r, r, r))   # keep the FIRST backup
+        steps.append("[ -f %s.orig ] || [ ! -f %s ] || cp %s %s.orig" % (r, r, r, r))   # keep FIRST backup; skip if new
     steps.append("upload %s (%d bytes)" % (tmp, nbytes))
+    steps.append("verify %s is %d bytes, else abort" % (tmp, nbytes))  # catch a silent/truncated upload
     steps.append("mv %s %s" % (t, r))                                  # rename-over → new inode
     if mode:
         steps.append("chmod %s %s" % (shlex.quote(mode), r))
@@ -55,17 +59,22 @@ def _paramiko():
 
 
 def connect(host: str, *, user: str = "root", password: Optional[str] = None,
-            key_filename: Optional[str] = None, port: int = 22, timeout: float = 15.0):
-    """A paramiko SSHClient to an old QNX dev shell: auto-add host key, allow legacy ssh-rsa."""
+            key_filename: Optional[str] = None, port: int = 22, timeout: float = 15.0,
+            modern: bool = False):
+    """A paramiko SSHClient. Default: coerce the legacy ``ssh-rsa`` signature the old QNX sshd needs.
+
+    ``modern=True`` skips that coercion, for a modern sshd — e.g. an emulator's console bridge, or any
+    host that (correctly) rejects ``ssh-rsa``.
+    """
     paramiko = _paramiko()
     cli = paramiko.SSHClient()
     cli.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    # The old QNX sshd omits server-sig-algs, so paramiko 2.9+ won't fall back to ssh-rsa (LP#1973241)
+    # unless the SHA-2 RSA variants are disabled. A modern sshd rejects ssh-rsa, so skip it there.
+    disabled = {} if modern else {"pubkeys": ["rsa-sha2-512", "rsa-sha2-256"]}
     cli.connect(host, port=port, username=user, password=password, key_filename=key_filename,
                 timeout=timeout, allow_agent=key_filename is None and password is None,
-                look_for_keys=key_filename is None,
-                # force the legacy ssh-rsa (SHA-1) signature: the old QNX sshd omits server-sig-algs,
-                # so paramiko 2.9+ otherwise refuses to fall back to it (paramiko LP#1973241).
-                disabled_algorithms={"pubkeys": ["rsa-sha2-512", "rsa-sha2-256"]})
+                look_for_keys=key_filename is None, disabled_algorithms=disabled)
     return cli
 
 
@@ -129,10 +138,21 @@ def install(host: str, data: bytes, remote: str, *, mount: str = "/fs/sda0",
             raise ValueError("refusing to install an empty file")
         _run_ok(cli, "mount -uw %s" % shlex.quote(mount), log)
         if backup:
-            _run_ok(cli, "[ -f %s.orig ] || cp %s %s.orig"
-                    % (shlex.quote(remote), shlex.quote(remote), shlex.quote(remote)), log)
+            # keep the FIRST backup; skip gracefully if the target doesn't exist yet (installing a new file)
+            _run_ok(cli, "[ -f %s.orig ] || [ ! -f %s ] || cp %s %s.orig"
+                    % (shlex.quote(remote), shlex.quote(remote), shlex.quote(remote), shlex.quote(remote)), log)
         log("  .. upload %s (%d bytes)" % (tmp, len(data)))
         put(cli, data, tmp)
+        # verify the upload landed intact BEFORE the rename-over — a silent truncation would brick the unit
+        rc, o, _e = run(cli, "wc -c < %s" % shlex.quote(tmp))
+        parts = o.split()
+        got = int(parts[0]) if (rc == 0 and parts and parts[0].isdigit()) else None
+        if got != len(data):
+            run(cli, "rm -f %s" % shlex.quote(tmp))
+            run(cli, "mount -ur %s" % shlex.quote(mount))
+            raise RuntimeError("upload size mismatch (sent %d, on-unit %s) — ABORTED, %s NOT replaced"
+                               % (len(data), got, remote))
+        log("  .. verified %d bytes on the unit" % got)
         _run_ok(cli, "mv %s %s" % (shlex.quote(tmp), shlex.quote(remote)), log)
         if mode:
             _run_ok(cli, "chmod %s %s" % (shlex.quote(mode), shlex.quote(remote)), log)
