@@ -63,7 +63,7 @@ provenance-correct way, consistent with `build-catalog` and `recover-key`:
 - Make the minimal `OPT_DEBUG STOP→RUN` edit, byte-length-preserving, to *that* file.
 - Install it with the no-signature file-copy; keep the untouched original as the revert.
 
-This unit (for reference) is software line **006.016.002** — *not* in the `007.xxx` family a generic
+This unit (for reference) is software line **006.016.002** (the SWFL/BTLD line — distinct from the CAFD *coding* version `006.031.014`; separate version axes) — *not* in the `007.xxx` family a generic
 unlocker targets, so a generic inlined config would be the wrong file. The config must come from this
 unit's own flash.
 
