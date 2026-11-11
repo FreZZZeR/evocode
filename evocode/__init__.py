@@ -9,5 +9,5 @@ the BTLD-selected signing key and the per-CAFD bit catalog. Read the SVK first a
 key off the unit's real BTLD + CAFD ids; never assume them.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __all__ = ["__version__"]
