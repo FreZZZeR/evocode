@@ -1,4 +1,4 @@
-# nbt-evo-coding (`evocode`)
+# evocode
 
 > **Язык:** [English](README.md) · Русский — как добавить язык, см. [TRANSLATING.md](TRANSLATING.md).
 
@@ -113,7 +113,7 @@ evocode fsc read  --host 169.254.199.99 --appno 0x0143            # прочит
 evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; добавьте --l3-key/--commit чтобы отключить
 ```
 
-`verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` дополняют картину. Установка пропатченного `NBTCarHU` —
+`verify` / `parse` / `fingerprint` / `from-log` дополняют картину. Установка пропатченного `NBTCarHU` —
 шаг замены прошивки (риск «кирпича»): сохраните сток-якорь (`--backup`), держите его для отката и
 сначала отрепетируйте своп в эмуляторе — см. [docs/testing.md](docs/testing.ru.md). evocode умеет и сам
 установить файл по SSH — `evocode fw install` (опциональный extra `[ssh]`): бэкап + rename-over новым

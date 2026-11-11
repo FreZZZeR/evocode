@@ -1,4 +1,4 @@
-# nbt-evo-coding (`evocode`)
+# evocode
 
 > **Language:** English · [Русский](README.ru.md) — see [TRANSLATING.md](TRANSLATING.md) to add one.
 
@@ -111,7 +111,7 @@ evocode fsc read  --host 169.254.199.99 --appno 0x0143            # read current
 evocode fsc disable --host 169.254.199.99 --appno 0x0143          # dry-run; add --l3-key/--commit to disable one
 ```
 
-`verify` / `parse` / `fingerprint` / `from-log` / `read` / `disable` round it out. Installing the patched `NBTCarHU` is a
+`verify` / `parse` / `fingerprint` / `from-log` round it out. Installing the patched `NBTCarHU` is a
 firmware-replace step (brick-risk): back up the stock anchor (`--backup`) and keep it to revert, and
 rehearse the swap first in an emulator — see [docs/testing.md](docs/testing.md). evocode can do the
 install itself over SSH — `evocode fw install` (optional `[ssh]` extra): backup + rename-over to a new

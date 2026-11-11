@@ -47,7 +47,7 @@ export NBTEVO_OWN_VIN=<ваш VIN>
 | Аутентификация | UDS **SecurityAccess L3** (seed/key, `l3.py`) | root-шелл на dev-интерфейсе |
 | Что делает | чтение, кодировка, FSC, флеш | заменяет файлы на разделах устройства |
 | Нужен SSH? | **Нет** | — |
-| команды evocode | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply` | `fw pull`/`install`/`revert` — установка `NBTCarHU.patched`, плагина |
+| команды evocode | `identify` `read` `decode` `verify` `sign` `write` `recover-key` `build-catalog` `fsc apply`/`read`/`disable` `root` | `fw pull`/`install`/`revert` — установка `NBTCarHU.patched`, плагина |
 
 **Итог: кодировка и FSC никогда не касаются SSH.** Они идут по тому же диагностическому каналу, что и
 E-Sys. SSH нужен только для заливки *файлов* прошивки на устройство (`NBTCarHU` при свопе blobB или
@@ -65,7 +65,7 @@ SVK (`identify`).
 
 ## 2. Чтение бесплатно; запись — нет
 
-- **Чтение** — `identify`, `read`, `decode`, `fsc parse`/`whosigned`/`find-blobb` — безопасно и
+- **Чтение** — `identify`, `read`, `decode`, `fsc read`/`parse`/`whosigned`/`find-blobb` — безопасно и
   обратимо. Делайте его свободно, чтобы сориентироваться.
 - **Запись** — `write`, `fsc apply`, `patch-blobb` + установка — может «окирпичить» или ухудшить
   устройство. Всегда: сначала чтение + бэкап, проверка артефакта офлайн, подтверждение готовности
