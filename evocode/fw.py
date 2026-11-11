@@ -9,9 +9,14 @@ OPT_DEBUG; those ride the diagnostic plane (``write`` / ``fsc apply`` / ``root``
 The value here is the *choreography*, not the copy: remount read-write, back up the current file, upload
 to a temp path **on the same partition**, **rename-over to a new inode** (never edit a running binary in
 place), restore perms, remount read-only, restart the HMI. Transport is plain ``cat`` over an exec
-channel — the unit's old sshd has no SFTP subsystem, so SFTP/modern ``scp`` would fail.
+channel: the unit's old sshd is not relied on to expose SFTP (its ``scp`` is driven in legacy mode), so
+SFTP / modern ``scp`` are side-stepped.
 
-Needs the ``ssh`` extra (``pip install 'evocode[ssh]'`` → paramiko). **Not yet validated on a live unit.**
+Needs the ``ssh`` extra (``pip install 'evocode[ssh]'`` → paramiko **3.x/4.x**; paramiko 5.0 dropped the
+SHA-1 key exchange the old QNX sshd needs, hence the ``<5`` pin). It forces the legacy ``ssh-rsa``
+signature for that sshd. If paramiko still can't negotiate, fall back to the system client:
+``ssh``/``scp -O`` with ``-oKexAlgorithms=+diffie-hellman-group14-sha1 -oHostKeyAlgorithms=+ssh-rsa``.
+**Not yet validated on a live unit.**
 """
 from __future__ import annotations
 
@@ -58,7 +63,9 @@ def connect(host: str, *, user: str = "root", password: Optional[str] = None,
     cli.connect(host, port=port, username=user, password=password, key_filename=key_filename,
                 timeout=timeout, allow_agent=key_filename is None and password is None,
                 look_for_keys=key_filename is None,
-                disabled_algorithms={"pubkeys": []})                   # keep ssh-rsa available for old hosts
+                # force the legacy ssh-rsa (SHA-1) signature: the old QNX sshd omits server-sig-algs,
+                # so paramiko 2.9+ otherwise refuses to fall back to it (paramiko LP#1973241).
+                disabled_algorithms={"pubkeys": ["rsa-sha2-512", "rsa-sha2-256"]})
     return cli
 
 

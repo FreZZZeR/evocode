@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evocode"
-version = "0.2.0"
+version = "0.2.1"
 description = "Read, decode, sign and write BMW NBT EVO (QNX) coding over ENET/HSFZ — pure stdlib."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,7 +21,7 @@ dependencies = []  # core is stdlib-only, on purpose
 
 [project.optional-dependencies]
 crypto = ["cryptography>=41"]   # only for `recover-key` (PKCS#12/AES/RSA over your own PSdZData)
-ssh = ["paramiko>=3"]           # only for `fw` (firmware-file install over the unit's dev SSH shell)
+ssh = ["paramiko>=3,<5"]        # `fw` over the unit's dev SSH shell; <5 keeps the SHA-1 KEX old QNX sshd needs
 test = ["pytest>=7"]            # `tests/` run under pytest (core tests also self-run: python tests/test_coding.py)
 
 [project.urls]
