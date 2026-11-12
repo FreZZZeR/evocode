@@ -22,6 +22,36 @@
       "shift": 7,
       "default": 0,
       "values": { "0": "split/widescreen off", "1": "full-screen" }
+    },
+    {
+      "name": "CarPlay enable (SWT coding gate)",
+      "token": "CARPLAY_SWT",
+      "datagroup": "0x3004",
+      "byte": 0,
+      "mask": "0x04",
+      "shift": 2,
+      "default": 0,
+      "values": { "0": "disabled", "1": "enabled" }
+    },
+    {
+      "name": "A4A app SWT enable (coding gate, separate from byte 107)",
+      "token": "SWT_APP_A4A",
+      "datagroup": "0x3000",
+      "byte": 110,
+      "mask": "0x80",
+      "shift": 7,
+      "default": 0,
+      "values": { "0": "disabled", "1": "enabled" }
+    },
+    {
+      "name": "A4A remote apps",
+      "token": "A4A_REMOTE_APPS",
+      "datagroup": "0x3000",
+      "byte": 108,
+      "mask": "0x01",
+      "shift": 0,
+      "default": 0,
+      "values": { "0": "disabled", "1": "enabled" }
     }
   ]
 }
