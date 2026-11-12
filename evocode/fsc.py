@@ -1,17 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
 """FSC activations — the owner-CA path: your own e=3 trust anchor, and FSCs you mint under it.
 
-The NBT EVO verifies every "long" FSC against ONE RSA modulus — **blobB** — compiled into NBTCarHU
-(``e=3``, PKCS#1 v1.5 / MD5). There is no per-feature key and no certificate lookup: an FSC is
-accepted iff its signature verifies under whatever modulus is installed as blobB. This is a separate
-mechanism from coding (which verifies against BMW's fixed Codier-Sign key you can only *recover*).
+The NBT EVO verifies every "long" FSC against ONE RSA modulus — the FSC **anchor** — compiled into
+NBTCarHU (``e=3``, PKCS#1 v1.5 / MD5). No per-feature key, no certificate lookup: an FSC is accepted
+iff its signature verifies under that anchor. Separate from coding (which verifies against BMW's
+fixed Codier-Sign key you can only *recover*).
 
-The owner path, on a car you own: generate your **own** e=3 key, install its modulus as blobB (a
-length-preserving firmware patch — see ``find_blobb``/``patch_blobb``), and mint FSCs with your
-private key. No BMW key is forged; you move the unit's trust to a key you hold.
+Caveat learned on a real unit: a used dump can hold **several** e=3 moduli — a struct-wrapped,
+code-referenced one AND the bare length-prefixed modulus the verifier actually uses — and
+``find_blobb`` can return the wrong one. The live anchor is whichever your **real FSCs** verify
+under: use ``identify_anchor`` (or ``find-blobb --fsc``) and patch THAT offset, never a guess.
 
-``keygen``/``mint``/``verify``/``parse``/``recover_modulus`` are pure stdlib. ``recover_modulus``
-(the e=3 GCD attack) identifies the anchor already on a used unit from the FSCs you read off it.
+The owner path, on a car you own: generate your **own** e=3 key, overwrite the live anchor with its
+modulus (a length-preserving firmware patch — ``identify_anchor`` + ``patch_blobb``), and mint FSCs
+with your private key. No BMW key is forged; you move the unit's trust to a key you hold. Note it is
+lossy — FSCs signed by the old anchor stop verifying, so re-mint every feature you still want.
+
+``keygen``/``mint``/``verify``/``parse``/``recover_modulus``/``find_anchors`` are pure stdlib.
+``recover_modulus`` (the e=3 GCD attack) recovers the anchor on a used unit from FSCs read off it.
 """
 from __future__ import annotations
 
@@ -272,6 +278,89 @@ def patch_blobb(nbtcarhu: bytes, offset: int, modulus: int) -> bytes:
     d = bytearray(nbtcarhu)
     d[offset:offset + SIG_LEN] = blobB_le(modulus)
     return bytes(d)
+
+
+# ---- enumerate / identify anchors (a used unit can carry more than one modulus) ----
+# find_blobb returns the single code-referenced key-struct — which on a real unit is NOT always the
+# modulus the FSC verifier uses. An NBT EVO dump can hold several e=3 1024-bit moduli at once: a
+# struct-wrapped one the literal pool points at, AND the bare length-prefixed modulus the verifier
+# actually loads (via MOVW/MOVT, so no literal pointer to scan for). Only the one your real FSCs
+# verify under is THE anchor; patch that one. (Observed first-hand: find_blobb -> 8df333, but the
+# live anchor that signs the stored CarPlay/Navi FSCs is a different modulus, de559.)
+
+_ANCHOR_PRIMES = _small_primes(1000)   # a real RSA modulus is coprime to all of these; most chaff is not
+
+def _looks_modulus(n: int, bits: int = 1024) -> bool:
+    """A plausible RSA modulus: odd, ~full width, no small factor."""
+    return bool(n & 1) and n.bit_length() >= bits - 8 and all(n % p for p in _ANCHOR_PRIMES)
+
+
+def anchor_at(binary: bytes, modulus: int) -> Tuple[int, str] | None:
+    """Where a known 128-byte modulus sits in the dump -> (offset, 'little'|'big'), else None."""
+    for endian in ("little", "big"):
+        i = binary.find(modulus.to_bytes(SIG_LEN, endian))
+        if i >= 0:
+            return i, endian
+    return None
+
+
+def find_anchors(binary: bytes, bits: int = 1024) -> List[Tuple[int, int, str]]:
+    """Every e=3 ``bits``-bit modulus embedded in a NBTCarHU dump -> [(offset, modulus, kind)].
+
+    kind is 'struct' (wrapped in ``{ver(0/1), e=3, len_words}``) or 'lenprefix' (a bare modulus
+    preceded only by its length word, as the real FSC anchor is stored). De-duplicated by offset.
+    More than one result means you MUST disambiguate with real FSCs before patching -> ``identify_anchor``.
+
+    ponytail: the bare-modulus scan keys only on the length word, so it over-reports (chaff that
+    follows a 0x20 word); ``identify_anchor`` (exact FSC verify) is the authoritative filter.
+    """
+    nbytes, lw, L = bits // 8, bits // 32, len(binary)
+    LW_LE, E3_LE = lw.to_bytes(4, "little"), (3).to_bytes(4, "little")
+    out: List[Tuple[int, int, str]] = []
+    seen: set = set()
+
+    def take(moff: int, kind: str) -> None:
+        if moff in seen or moff + nbytes > L:
+            return
+        n = int.from_bytes(binary[moff:moff + nbytes], "little")
+        if _looks_modulus(n, bits):
+            out.append((moff, n, kind))
+            seen.add(moff)
+
+    o = 0
+    while o + 12 + nbytes <= L:                       # {ver(0/1), e=3, len_words} + modulus
+        if binary[o + 4:o + 8] == E3_LE and binary[o + 8:o + 12] == LW_LE \
+                and binary[o:o + 4] in (b"\x00\x00\x00\x00", b"\x01\x00\x00\x00"):
+            take(o + 12, "struct")
+        o += 4
+    o = 0
+    while o + 4 + nbytes <= L:                        # bare: a lone length word, then the modulus
+        if binary[o:o + 4] == LW_LE:
+            take(o + 4, "lenprefix")
+        o += 4
+    return sorted(out)
+
+
+def identify_anchor(binary: bytes, fscs: List[bytes]) -> Tuple[int, int, str] | None:
+    """The embedded modulus that actually validates these FSCs -> (offset, modulus, endian).
+
+    This — not ``find_blobb`` — is the anchor to patch for owner-CA: the one the unit's FSC verifier
+    uses. Returns None if nothing embedded verifies them (the anchor is external, or the store is not
+    re-verified at runtime).
+    """
+    cands: List[int] = []
+    if len(fscs) >= 2:
+        try:
+            cands.append(recover_modulus(fscs))
+        except ValueError:
+            pass
+    cands += [m for _, m, _ in find_anchors(binary)]
+    for n in cands:
+        if n and all(verify(f, n)[0] for f in fscs):
+            loc = anchor_at(binary, n)
+            if loc:
+                return loc[0], n, loc[1]
+    return None
 
 
 # ---- SWT routine payloads (on-car FSC store / read / disable; RID 0x0F1F) ----

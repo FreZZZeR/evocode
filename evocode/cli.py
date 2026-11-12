@@ -351,17 +351,50 @@ def cmd_fsc_whosigned(a) -> int:
 
 def cmd_fsc_find_blobb(a) -> int:
     from . import fsc as F
-    off, n = F.find_blobb(Path(a.nbtcarhu).read_bytes())
-    print("blobB @ file offset 0x%06X  (e=3, %d-bit, fp %s)" % (off, n.bit_length(), F.fingerprint(n)))
+    data = Path(a.nbtcarhu).read_bytes()
+    anchors = F.find_anchors(data)
+    real = F.identify_anchor(data, [Path(f).read_bytes() for f in a.fsc]) if a.fsc else None
+    if not anchors:                                      # fall back to the legacy single-shot locate
+        off, n = F.find_blobb(data)
+        anchors = [(off, n, "struct")]
+    for off, n, kind in anchors:
+        tag = "  <== VALIDATES YOUR FSCs (patch THIS one)" if real and off == real[0] else ""
+        print("  @0x%06X  fp %s  %d-bit  [%s]%s" % (off, F.fingerprint(n), n.bit_length(), kind, tag))
+    if a.fsc and not real:
+        print("==> none of the embedded moduli verify your FSCs — the anchor is external, or the "
+              "store is not re-verified at runtime", file=sys.stderr)
+    elif not a.fsc and len(anchors) > 1:
+        print("==> %d anchors present; pass --fsc <real FSCs read off the unit> to identify which "
+              "one the verifier uses before patching" % len(anchors), file=sys.stderr)
     if a.save_blobb:
-        Path(a.save_blobb).write_bytes(F.blobB_le(n))
+        Path(a.save_blobb).write_bytes(F.blobB_le(real[1] if real else anchors[0][1]))
     return 0
 
 
 def cmd_fsc_patch_blobb(a) -> int:
     from . import fsc as F
     data = Path(a.nbtcarhu).read_bytes()
-    off = int(a.offset, 0) if a.offset else F.find_blobb(data)[0]
+    if a.offset:
+        off = int(a.offset, 0)
+    elif a.fsc:
+        real = F.identify_anchor(data, [Path(f).read_bytes() for f in a.fsc])
+        if not real:
+            print("ERROR: no embedded modulus validates those FSCs — can't pick a patch target",
+                  file=sys.stderr)
+            return 2
+        off = real[0]
+    else:
+        anchors = F.find_anchors(data)
+        if len(anchors) > 1:                             # the guardrail: don't repeat the wrong-blob patch
+            print("ERROR: %d candidate moduli in this dump — refusing to guess. Pass --fsc <real "
+                  "FSCs> to target the one the verifier uses, or --offset to force one:" % len(anchors),
+                  file=sys.stderr)
+            for o, n, kind in anchors[:8]:
+                print("   @0x%06X  fp %s  [%s]" % (o, F.fingerprint(n), kind), file=sys.stderr)
+            if len(anchors) > 8:
+                print("   ...(+%d more; --fsc resolves it exactly)" % (len(anchors) - 8), file=sys.stderr)
+            return 2
+        off = anchors[0][0] if anchors else F.find_blobb(data)[0]
     old = int.from_bytes(data[off:off + 128], "little")
     key = json.loads(Path(a.key).read_text())
     n = int(key["n_hex"], 16)
@@ -731,12 +764,14 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--recover", action="store_true"); g.set_defaults(fn=cmd_fsc_whosigned)
     g = fs.add_parser("from-log", help="extract .fsc tokens from a GetFSC read log")
     g.add_argument("log"); g.add_argument("-o", "--out", required=True); g.set_defaults(fn=cmd_fsc_from_log)
-    g = fs.add_parser("find-blobb", help="locate the FSC anchor in a NBTCarHU dump")
+    g = fs.add_parser("find-blobb", help="enumerate FSC anchors in a NBTCarHU dump; --fsc names the live one")
     g.add_argument("nbtcarhu"); g.add_argument("--save-blobb", help="write the 128-byte modulus here")
+    g.add_argument("--fsc", action="append", help="real FSC(s) read off the unit — flags the anchor that validates them")
     g.set_defaults(fn=cmd_fsc_find_blobb)
     g = fs.add_parser("patch-blobb", help="swap the anchor in a NBTCarHU dump to your own key (offline)")
     g.add_argument("nbtcarhu"); g.add_argument("--key", required=True)
-    g.add_argument("--offset", help="blobB file offset (default: auto-locate)")
+    g.add_argument("--offset", help="blobB file offset (default: identify via --fsc, else the sole anchor)")
+    g.add_argument("--fsc", action="append", help="real FSC(s) — target the anchor that validates them")
     g.add_argument("--backup", help="write the stock 128-byte anchor here, for revert")
     g.add_argument("-o", "--out", required=True); g.set_defaults(fn=cmd_fsc_patch_blobb)
     g = fs.add_parser("apply", help="store minted FSCs on the car (SwtRoutine + L3; dry-run unless --commit)")
