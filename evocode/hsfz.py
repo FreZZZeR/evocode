@@ -85,7 +85,7 @@ def discover(bind_ip: str, broadcast: str = "169.254.255.255", timeout: float = 
 class Hsfz:
     """One TCP/6801 HSFZ session. Set the target per request; the gateway routes by it."""
 
-    def __init__(self, ip: str, source: int = SRC_TESTER, timeout: float = 5.0):
+    def __init__(self, ip: str, source: int = SRC_TESTER, timeout: float = 15.0):
         self.ip = ip
         self.source = source
         self._timeout = timeout
