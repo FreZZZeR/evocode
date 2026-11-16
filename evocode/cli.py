@@ -91,14 +91,20 @@ def cmd_sign(a) -> int:
     mem, meta = srec.parse(Path(a.ncd_in).read_text())
     key = coding.load_key(a.key)
     scheme = coding.SCHEMES[a.scheme]
+    changed = 0
     for s in a.set:
-        srec.set_byte(mem, *_parse_set(s))
+        dg, off, val, mask, shift = _parse_set(s)
+        addr = (dg << 8) + off
+        before = mem.get(addr, 0)
+        srec.set_byte(mem, dg, off, val, mask, shift)
+        changed += mem.get(addr, 0) != before
     sig = coding.resign(mem, key, scheme)
     if not coding.verify(mem, key, scheme):
         print("ERROR: self-verify failed after signing", file=sys.stderr)
         return 1
     Path(a.ncd_out).write_text(srec.emit(mem, meta))
-    print(json.dumps({"edits": len(a.set), "signature": sig.hex(), "out": a.ncd_out}, indent=2))
+    print(json.dumps({"directives": len(a.set), "changed": int(changed),
+                      "signature": sig.hex(), "out": a.ncd_out}, indent=2))
     return 0
 
 
@@ -163,6 +169,13 @@ def cmd_write(a) -> int:
         for dg in order:
             u.write_did(dg, pages[dg])
             print("  wrote 0x%04X (%d bytes)" % (dg, len(pages[dg])))
+        if a.verify:
+            bad = [dg for dg in order if u.read_did(dg) != pages[dg]]
+            if bad:
+                print("ABORT: read-back mismatch after write: %s. CPS not written, no reset; "
+                      "revert = write your backup NCD." % [hex(d) for d in bad], file=sys.stderr)
+                return 4
+            print("verify: all %d datagroups read back byte-identical" % len(order))
         resp = u.routine(0x01, RID_CHECK_CODING)
         status = resp[4:]                                # 71 01 0F 01 <status...>
         if status and any(status):
@@ -719,6 +732,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--user-id", type=_target, default=0x00000000, help="testerId for seed+key (default 0)")
     p.add_argument("--cps", help="CPS (0x37FE) value as hex; default keep current / restore VIN-short if erased")
     p.add_argument("--commit", action="store_true", help="actually write (gated); omit to rehearse")
+    p.add_argument("--verify", action="store_true",
+                   help="after writing, read each datagroup back and confirm it matches (aborts before CPS/reset on mismatch)")
     p.set_defaults(fn=cmd_write)
 
     p = sub.add_parser("recover-key", help="recover your NCD/L3 signing key from your own PSdZData")
