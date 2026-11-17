@@ -27,3 +27,6 @@ psdz/
 *.fsc
 *.blobb
 *blobB*
+
+# local agent rules (names personal email; never publish)
+AGENTS.local.md

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Guardrail: block a push that would publish private data, the work identity, or failing tests.
+. "$(dirname "$0")/_guardrail.sh"
+_here=$(dirname "$0")
+
+guard_check_identity
+
+# 1) The whole tracked tree must be clean (hooks/ excluded so patterns don't self-match).
+_tree=$(git grep -nIE "$GUARD_RE" -- . ':(exclude)hooks/' 2>/dev/null || true)
+[ -n "$_tree" ] && _guard_die "tracked files contain private data" "$_tree"
+
+# 2) No commit being pushed may be authored/committed with the work identity.
+while read -r _lref _lsha _rref _rsha; do
+    case "$_lsha" in *[!0]*) : ;; *) continue ;; esac   # all-zeros local sha = branch delete
+    if printf '%s' "$_rsha" | grep -qE '^0+$'; then _range="$_lsha"; else _range="$_rsha..$_lsha"; fi
+    _bad=$(git log --format='%ae %ce' "$_range" 2>/dev/null | grep -E "$WORK_EMAIL_RE" || true)
+    [ -n "$_bad" ] && _guard_die "a commit being pushed uses the work identity" \
+"Found: $_bad
+Rewrite author/committer email to igorfrezer@gmail.com before pushing."
+done
+
+# 3) Tests must pass (the local verification stage).
+if [ -x "$_here/run-tests.sh" ]; then
+    echo "guardrail: running tests before push..."
+    "$_here/run-tests.sh" || _guard_die "tests failed" "Fix the tests (hooks/run-tests.sh) before pushing."
+fi
+
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Guardrail: block a commit that introduces private data or uses the work identity.
+. "$(dirname "$0")/_guardrail.sh"
+
+guard_check_identity
+
+# Scan only the lines being ADDED by this commit (excluding this hooks/ dir).
+_added=$(git diff --cached -U0 -- . ':(exclude)hooks/' | grep -E '^\+' | grep -vE '^\+\+\+' || true)
+guard_scan_text "staged changes" "$_added"
+
+exit 0

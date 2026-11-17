@@ -139,3 +139,8 @@ on top of the canonical license — open an issue to discuss rather than editing
 This is an independent re-implementation that vendors no third-party code — mostly clean-room, with
 one module (`swdl.py`) shaped by an existing flasher's observed wire behaviour; see
 [CREDITS.md](CREDITS.md).
+
+## Development guardrail
+
+Committed git hooks block publishing private data and run the tests before every push.
+Activate once per clone: `git config core.hooksPath hooks` (details in `hooks/README.md`).
