@@ -20,7 +20,8 @@ a small, dependency-free Python library and CLI.
 
 ## Status
 
-Version 0.2.x, pure-stdlib core, on PyPI (`pip install evocode`). What is proven vs. not:
+Version 0.5.x, pure-stdlib core, on PyPI (`pip install evocode`; the `ssh` / `crypto` extras add
+paramiko / cryptography). What is proven vs. not:
 
 - **Coding (diagnostic plane) — proven on real data.** HSFZ transport, the `BMWSigVerify` signature, and
   `read`/`decode`/`verify`/`sign`/`write`. The signer reproduces a real car's own NCD signature
@@ -40,11 +41,17 @@ Version 0.2.x, pure-stdlib core, on PyPI (`pip install evocode`). What is proven
   emulator.** A safe file swap over the dev SSH shell (backup → upload → **size-verify** → rename-over →
   restart). The command sequence runs on real QNX; the SSH file transport itself is **not yet validated on
   a real unit**. See [docs/testing.md](docs/testing.md).
+- **Head restart (`reset`) — proven.** `evocode reset` issues ECUReset `11 01` so the head reboots and
+  re-reads everything (plugins, coding, FSC) **without a power-cycle** — the stock, plugin-free restart,
+  and the re-read path to use where a head's `OnOffDSICommander appreset` is broken. The `write` and
+  `fsc apply` paths already end with it on the real car; VIN-gated.
 
 ## Install
 
 ```bash
-pip install -e .          # pure stdlib; no runtime dependencies
+pip install evocode                 # core: pure stdlib, no runtime dependencies
+pip install "evocode[ssh]"          # + paramiko — for `fw` (file install over the unit's dev SSH)
+pip install "evocode[crypto]"       # + cryptography + openssl — for recover-key / build-catalog
 ```
 
 ## Quickstart

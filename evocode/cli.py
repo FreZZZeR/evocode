@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Tuple
 
 from . import __version__, coding, consent, l3, srec
-from .hsfz import Hsfz, TGT_HU
+from .hsfz import Hsfz, HsfzError, TGT_HU
 from .uds import Uds, UdsError
 
 # coding write choreography constants (see docs/protocol.md)
@@ -54,6 +54,25 @@ def cmd_identify(a) -> int:
     print("BTLD: %s" % (svk.btld or "?"))
     for c in svk.cafds:
         print("CAFD: %s" % c)
+    return 0
+
+
+def cmd_reset(a) -> int:
+    # ECUReset hardReset (11 01): the stock, plugin-free way to reboot the head so it re-reads
+    # everything (plugins, coding, FSC) without a power-cycle. This is the re-read path to use
+    # when a head's OnOffDSICommander `appreset` is broken; the write/fsc paths already end with
+    # it. The HU answers 51 01, then drops the diagnostic link as it reboots — that drop is the
+    # reset taking effect, not an error.
+    consent.owned_vin()                                  # action on the car — gate on the owned VIN
+    try:
+        with Hsfz(a.host) as h:
+            u = Uds(h, a.target)
+            consent.assert_owned(u.read_vin())           # confirm it's your car before rebooting it
+            u.reset(a.sub)
+    except (HsfzError, OSError) as e:
+        print("  (diagnostic link closed as the HU reboots — expected: %s)" % e)
+    print("ECUReset 11 %02X issued to 0x%02X; the head reboots and re-reads everything "
+          "(~1 min, no power-cycle). Watch the HMI come up." % (a.sub, a.target))
     return 0
 
 
@@ -703,6 +722,11 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--target", type=_target, default=TGT_HU, help="ECU diag address (default 0x63)")
 
     p = sub.add_parser("identify", help="read SVK: BTLD, CAFD, VIN"); host_target(p); p.set_defaults(fn=cmd_identify)
+
+    p = sub.add_parser("reset", help="reboot the head (ECUReset 11 01) so it re-reads plugins/coding/FSC — no power-cycle")
+    host_target(p)
+    p.add_argument("--sub", type=_target, default=0x01, help="ECUReset subfunction (default 0x01 hardReset)")
+    p.set_defaults(fn=cmd_reset)
 
     p = sub.add_parser("read", help="back up live coding to an NCD"); host_target(p)
     p.add_argument("-o", "--out", required=True); p.set_defaults(fn=cmd_read)
