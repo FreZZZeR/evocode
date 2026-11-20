@@ -73,13 +73,18 @@ container fits: all key off those two ids *and their versions*. Read the SVK fir
 ---
 
 **Rehearsing without a car.** Part of the firmware-file (filesystem-plane) work can be tried in an
-emulator first: [IDEmu](https://github.com/herrbimmer/IDEmu) boots an NBT EVO head unit's own software
-under QEMU on macOS, with SSH and a coding editor. Useful to confirm a patched `NBTCarHU` boots, the
-HMI comes up, SSH works and the coding is intact *before* you go to the car. It does **not** expose
-the HSFZ diagnostic endpoint (TCP 6801), so evocode's diagnostic-plane commands
-(`read`/`write`/`sign`/`fsc apply`/`root`) can't be driven against it, and maps/nav don't run — it
-complements on-car testing, it doesn't replace it. (License: PolyForm Noncommercial.) A step-by-step
-rehearsal — what it can and can't test, the flow, pass/fail — is in [docs/testing.md](docs/testing.md).
+emulator first: [IDEmu](https://github.com/herrbimmer/IDEmu) runs original BMW head-unit software under
+QEMU (CIC and iDrive 5–8). For NBT EVO / iDrive 5/6 it supports macOS and Linux/WSL, real HMI, virtual
+CAN/GPS, cluster/HUD, SSH and a coding editor. As checked on 2026-11-20, upstream has exact-match
+24-03 (`007_051_002`) and 18-03 (`006_017_006`) HMI shim profiles; the broader multi-firmware registry
+in [PR #16](https://github.com/herrbimmer/IDEmu/pull/16) is open and unmerged. As checked on 2026-11-20, its head
+[`d73b049`](https://github.com/FreZZZeR/IDEmu/commit/d73b049d8f69e146b08018e8204a516a9bb7b501) includes main `d03ecd8` and has `mergeable=true`, `clean`.
+Our `006_016_002` has no validated profile; the neighbouring `006_017_006` does not establish its
+HMI/plugin ABI compatibility. Use a matching profile to rehearse a patched `NBTCarHU` and HMI/plugins; a guest that boots without running `NBTCarHU` has not
+validated that binary. IDEmu still exposes no HSFZ diagnostic endpoint (TCP 6801), so
+`read`/`write`/`fsc apply`/`root` need a real unit or a mock. Its host-rendered map is not BMW route
+guidance or an FSC acceptance test. (License: PolyForm Noncommercial.) Setup, transfer limitations and
+pass/fail criteria are in [docs/dev-stand.md](docs/dev-stand.md) and [docs/testing.md](docs/testing.md).
 
 ## 3. Risk map — the places this can go wrong, and the guard for each
 
